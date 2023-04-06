@@ -5,12 +5,13 @@ import { faker } from '@faker-js/faker';
 import { hash } from 'argon2';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt/dist';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
 	constructor(
-    private prismaService: PrismaService,
-    private jwt: JwtService
+		private prismaService: PrismaService,
+		private jwt: JwtService
     ) {}
 
 	async register(userDto: RegisterDto) {
@@ -32,14 +33,30 @@ export class AuthService {
 			}
 		});
 
-		return user;
+		const tokens = await this.issueTokens(user.id)
+
+		return {
+			email: user.email,
+			name: user.name,
+			...tokens
+		}
 	}
 
-  private async issueTokens(userId: number) {
-    const data = {id: userId}
+	private async issueTokens(userId: number) {
+		const data = {id: userId}
 
+		const accessToken = this.jwt.sign(data, {
+			expiresIn: '1h'
+		})
+		const refreshToken = this.jwt.sign(data, {
+			expiresIn: '7d'
+		})
 
-  }
+		return {
+			accessToken,
+			refreshToken
+		}
+	}
 
   async login(userDto: LoginDto) {
 
