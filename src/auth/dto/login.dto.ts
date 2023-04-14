@@ -15,6 +15,9 @@ export class LoginDto {
 
     @IsString()
     avatarPath: string
+    
+    @IsString()
+    id: string
 
     @IsString()
     phone: string

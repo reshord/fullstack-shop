@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
 import { PrismaService } from 'src/prisma.service';
 import { faker } from '@faker-js/faker';
-import { hash } from 'argon2';
+import { hash, verify } from 'argon2';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt/dist';
 import { User } from '@prisma/client';
@@ -33,6 +33,11 @@ export class AuthService {
 			}
 		});
 
+		return this.returnUser(user)
+		
+	}
+
+	private async returnUser(user: User) {
 		const tokens = await this.issueTokens(user.id)
 
 		return {
@@ -58,7 +63,31 @@ export class AuthService {
 		}
 	}
 
-  async login(userDto: LoginDto) {
+	async login(userDto: LoginDto) {
+		const existUser = await this.prismaService.user.findUnique({
+			where: {
+				email: userDto.email
+			}
+		})
+		if(!existUser) throw new BadRequestException('User is not exist')
+		const isValidPass = await verify(existUser.password, userDto.password)
 
-  }
+		if(!isValidPass) throw new UnauthorizedException('Invalid password')
+
+		return this.returnUser(existUser)
+	}
+
+  	async getNewTokens(token: string) {
+		const res = await this.jwt.verifyAsync(token)
+
+		if(!res) throw new UnauthorizedException('Invalid refresh token')
+
+		const user = await this.prismaService.user.findUnique({
+			where: {
+				id: res.id
+			}
+		})
+
+		return await this.returnUser(user)
+	}
 }
