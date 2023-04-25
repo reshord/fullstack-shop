@@ -19,7 +19,9 @@ export class AuthService {
 			where: {
 				email: userDto.email
 			}
+
 		});
+
 
 		if (existUser) throw new BadRequestException('User already exist');
 
